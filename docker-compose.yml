@@ -1,0 +1,57 @@
+version: '3'
+networks:
+  minharede:
+    #external: true
+    driver:
+      bridge
+services:
+  
+  nodejs:
+    build:
+      context: .
+      dockerfile: Dockerfile-nodejs
+    entrypoint: dockerize -wait tcp://db:3306 -timeout 30s /app/docker-entrypoint.sh
+    container_name: nodejs
+    hostname: nodejsserver
+    ports:
+      - 3000:3000
+    volumes:
+      - ./nodejs:/app
+      - /app/node_modules
+    depends_on:
+      - db
+    links:
+      - db
+    networks:
+      - minharede
+  nginx:
+    build:
+      context: .
+      dockerfile: Dockerfile-nginx
+    entrypoint: dockerize -wait http://nodejs:3000 -timeout 35s /usr/local/bin/docker-entrypoint.sh
+    image: nginx
+    ports:
+      - 8080:80
+        
+    depends_on:
+      - nodejs
+    networks:
+      - minharede
+      
+  db:
+    image: mysql:5.7
+    command: --innodb-use-native-aio=0
+    container_name: db
+    restart: always
+    tty: true
+    volumes: 
+     - ./mysql:/var/lib/mysql
+    environment:
+      - MYSQL_DATABASE=dbnode
+      - MYSQL_ROOT_PASSWORD=root
+      - MYSQL_USER=admin
+    networks:
+      - minharede
+
+
+   
