@@ -1,51 +1,48 @@
 version: '3'
 networks:
   minharede:
-    #external: true
-    driver:
-      bridge
+    driver: bridge
+
 services:
-  
+
   nodejs:
     build:
-      context: .
-      dockerfile: Dockerfile-nodejs
-    entrypoint: dockerize -wait tcp://db:3306 -timeout 30s /app/docker-entrypoint.sh
+      context: ./nodejs
+      dockerfile: Dockerfile
+    entrypoint: dockerize -wait tcp://db:3306 -timeout 30s bash -c "./docker-entrypoint.sh"
     container_name: nodejs
     hostname: nodejsserver
-    ports:
-      - 3000:3000
+    # retirei a exposição da porta 3000 pois apenas a porta 8080 deve ficar exposta e apenas o nginx terá acesso a qualquer outra porta da aplicação
     volumes:
       - ./nodejs:/app
-      - /app/node_modules
+      # retirei o volume anonimo pois agora realizamos o npm install dentro do container em execução e não mais no build da imagem
     depends_on:
       - db
     links:
       - db
     networks:
       - minharede
+
   nginx:
     build:
-      context: .
-      dockerfile: Dockerfile-nginx
-    entrypoint: dockerize -wait http://nodejs:3000 -timeout 35s /usr/local/bin/docker-entrypoint.sh
-    image: nginx
+      context: ./nginx
+      dockerfile: Dockerfile
+    # image: nginx # ao incluir esta linha ele ignora a sua configuração do nginx.conf e apresenta a tela padrão do nginx no navegador
     ports:
       - 8080:80
-        
     depends_on:
       - nodejs
     networks:
       - minharede
-      
+
   db:
     image: mysql:5.7
     command: --innodb-use-native-aio=0
     container_name: db
     restart: always
     tty: true
-    volumes: 
-     - ./mysql:/var/lib/mysql
+    volumes:
+      - ./mysql:/var/lib/mysql
     environment:
       - MYSQL_DATABASE=dbnode
       - MYSQL_ROOT_PASSWORD=root
@@ -54,4 +51,4 @@ services:
       - minharede
 
 
-   
+# fiz uma correção geral de imports dos Dockerfile e alterei os nomes para um padrão, é importante deixar os Dockerfile com seus respectivos "donos" para uma melhor localização.
